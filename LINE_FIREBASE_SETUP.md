@@ -1,20 +1,43 @@
-# LINE Login + Firebase Auth 部署備註
+# LINE Login + Firebase Authentication
 
-此功能使用 LINE Login OAuth 2.1，後端驗證 LINE ID token 後，以 Firebase Admin SDK 簽發 custom token；LINE channel secret 不會放在靜態網站。
+This repository now contains the static-site login UI and a Firebase Functions v2 backend scaffold. LINE channel credentials are never placed in the website. The backend validates LINE OAuth state and ID-token nonce, then uses Firebase Admin to mint a custom token that the web client exchanges with `signInWithCustomToken()`.
 
-## 開發者需要先提供／設定
+## What is already implemented
 
-1. LINE Developers 建立 LINE Login channel，完成 LINE 使用者條款與必要的 channel 設定；提供 Channel ID。Channel secret 請只用 Firebase Functions secret 命令設定，絕不可放進網站檔或聊天。
-2. LINE Login channel 的 Callback URL 填入部署後 `lineLoginCallback` HTTPS Function URL。
-3. Firebase 專案啟用 Cloud Functions 與 Firestore。Firebase CLI 登入有部署權限的專案管理員帳號。
-4. 專案根目錄設定 Firebase Functions：`firebase init functions`（JavaScript；若已初始化請保留既有 firebase.json/firebase config），確保根目錄 `firebase.json` 指向 `functions`。
-5. 設定參數：`LINE_CHANNEL_ID`（LINE Developers 的 Channel ID）、`APP_ORIGIN`（`https://an511ok.github.io/1107/`）、`ALLOWED_ORIGIN`（`https://an511ok.github.io`）。使用 `firebase functions:secrets:set LINE_CHANNEL_SECRET` 設定 LINE Channel secret。
-6. `firebase deploy --only functions` 部署 `lineLoginStart` 和 `lineLoginCallback`，複製兩個 HTTPS Function URL，寫入 `firebase-config.js` 的 `lineLoginStartUrl`、`lineLoginCallbackUrl`。Callback URL 必須與 LINE Developers 設定完全一致。
-7. 將 Firebase Authentication 的 Authorized domains 加入 GitHub Pages 主機 `an511ok.github.io`。
-8. Firestore rules 預設拒絕用戶直接讀寫 `lineAuthUsers` 集合；前端登入後仍只驗證身份。若要同步行程，需另外建模並以 `request.auth.uid` 限制資料存取。
+- A LINE sign-in choice in the existing sign-in dialog.
+- LINE authorization-code flow, callback validation, Firebase custom-token issuance, and client-side state checking.
+- Firebase Functions deployment configuration targeting project `project-74953083216937910597`.
+- Unit tests for signed OAuth state validation.
 
-## 安全注意
+LINE login is not active until a LINE Login channel is created, its credentials and callback are configured, and the Functions are deployed.
 
-- 不要提交 `.env`、Firebase Admin service account JSON、LINE Channel secret 或私鑰。
-- Firebase config 內的 LINE Function URL 是公開端點；函式會限制 Origin、使用短期 HttpOnly state/nonce cookie、驗證 LINE ID token、nonce 和 OAuth state。
-- GitHub Pages 是靜態主機，不支援安全保存 LINE Channel secret 或執行 LINE OAuth code exchange；因此 LINE 登入不能只靠前端 Firebase SDK。
+## Setup needed in your accounts
+
+1. In LINE Developers, create a **LINE Login channel** under a provider. Enable the OpenID Connect `openid` scope and profile scope. Keep the Channel Secret private.
+2. Copy `functions/.env.example` to `functions/.env.project-74953083216937910597` and replace `LINE_CHANNEL_ID` with the channel's Channel ID. Keep `APP_ORIGIN`, `ALLOWED_ORIGIN`, and `LINE_CALLBACK_URL` as shown unless the site URL or function region changes. This parameter file is git-ignored.
+3. Install/use Firebase CLI and sign in with a project owner/editor account. The project may need the Blaze billing plan to deploy Cloud Functions; upgrading billing can incur charges, so review and approve that in Firebase Console yourself before deployment.
+4. From the repository root, set the channel secret without putting it in a file or chat:
+
+   ```sh
+   firebase functions:secrets:set LINE_CHANNEL_SECRET --project project-74953083216937910597
+   ```
+
+   Enter the secret only at the CLI's secure prompt.
+5. Deploy:
+
+   ```sh
+   firebase deploy --only functions --project project-74953083216937910597
+   ```
+
+   The project uses region `us-central1`. Confirm the deployed `lineLoginCallback` URL matches `LINE_CALLBACK_URL` exactly.
+6. In LINE Developers, set that exact deployed HTTPS callback URL in the LINE Login channel's Callback URL.
+7. Set `lineLoginStartUrl` in `firebase-config.js` to the deployed `lineLoginStart` URL, then commit and push that public URL value. It is an endpoint, not a secret. Do not add the Channel Secret to `firebase-config.js`.
+8. Test from the published HTTPS website on desktop and mobile. Firebase Authentication Authorized domains must include `an511ok.github.io`.
+
+## Security notes
+
+- `.gitignore` excludes `functions/.env.*`, dependency folders and Firebase local state. Never commit LINE Channel Secret or service-account private keys.
+- OAuth state is HMAC-signed with the LINE Channel Secret, has a 10-minute expiry and is bound to browser session storage; LINE ID token signature, audience, issuer, expiration and nonce are checked before Firebase token issuance.
+- The HTTP start endpoint only accepts the exact configured website Origin and uses CORS. CORS is not a substitute for rate controls; monitor Cloud Functions usage and consider Firebase App Check before broad public use.
+- LINE Login here only authenticates the user. It does not sync calendar data across devices. Existing events and tasks remain in browser localStorage.
+- Admin SDK token signing in Cloud Functions may require the runtime service account to have `iam.serviceAccounts.signBlob` (Service Account Token Creator) permission. Do not download or commit a service-account key to solve this.
