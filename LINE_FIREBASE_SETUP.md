@@ -6,7 +6,7 @@ This repository now contains the static-site login UI and a Firebase Functions v
 
 - A LINE sign-in choice in the existing sign-in dialog.
 - LINE authorization-code flow, callback validation, Firebase custom-token issuance, and client-side state checking.
-- Firebase Functions deployment configuration targeting project `project-74953083216937910597`.
+- Firebase Functions deployment configuration targeting project `project-7495308321603910597`.
 - Unit tests for signed OAuth state validation.
 
 LINE login is not active until a LINE Login channel is created, its credentials and callback are configured, and the Functions are deployed.
@@ -14,19 +14,19 @@ LINE login is not active until a LINE Login channel is created, its credentials 
 ## Setup needed in your accounts
 
 1. In LINE Developers, create a **LINE Login channel** under a provider. Enable the OpenID Connect `openid` scope and profile scope. Keep the Channel Secret private.
-2. Copy `functions/.env.example` to `functions/.env.project-74953083216937910597` and replace `LINE_CHANNEL_ID` with the channel's Channel ID. Keep `APP_ORIGIN`, `ALLOWED_ORIGIN`, and `LINE_CALLBACK_URL` as shown unless the site URL or function region changes. This parameter file is git-ignored.
+2. Copy `functions/.env.example` to `functions/.env.project-7495308321603910597` and replace `LINE_CHANNEL_ID` with the channel's Channel ID. Keep `APP_ORIGIN`, `ALLOWED_ORIGIN`, and `LINE_CALLBACK_URL` as shown unless the site URL or function region changes. This parameter file is git-ignored.
 3. Install/use Firebase CLI and sign in with a project owner/editor account. The project may need the Blaze billing plan to deploy Cloud Functions; upgrading billing can incur charges, so review and approve that in Firebase Console yourself before deployment.
 4. From the repository root, set the channel secret without putting it in a file or chat:
 
    ```sh
-   firebase functions:secrets:set LINE_CHANNEL_SECRET --project project-74953083216937910597
+   firebase functions:secrets:set LINE_CHANNEL_SECRET --project project-7495308321603910597
    ```
 
    Enter the secret only at the CLI's secure prompt.
 5. Deploy:
 
    ```sh
-   firebase deploy --only functions --project project-74953083216937910597
+   firebase deploy --only functions --project project-7495308321603910597
    ```
 
    The project uses region `us-central1`. Confirm the deployed `lineLoginCallback` URL matches `LINE_CALLBACK_URL` exactly.
