@@ -7,5 +7,6 @@ window.FIREBASE_CONFIG = {
   storageBucket: 'project-7495308321603910597.firebasestorage.app',
   messagingSenderId: '1008687787287',
   appId: '1:1008687787287:web:bf85be71f8661c2e341b52',
-  lineLoginStartUrl: ''
+  lineLoginStartUrl: '',
+  appCheckSiteKey: '6LeDujEuAAAAAMVOZel_uRR0F0cVoHgzWrcXE3w_'
 };
