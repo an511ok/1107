@@ -5,6 +5,7 @@ import { getAI, getGenerativeModel, GoogleAIBackend } from 'https://www.gstatic.
 const config = window.FIREBASE_CONFIG;
 let models = [];
 let groundedModels = [];
+let answerModels = [];
 let questionHistory = [];
 
 function explainError(error) {
@@ -67,6 +68,13 @@ try {
       generationConfig: { temperature: 0.4, maxOutputTokens: 1200 },
     }),
   }));
+  answerModels = ['gemini-3.5-flash-lite', 'gemini-3.8-flash'].map(modelName => ({
+    name: modelName,
+    model: getGenerativeModel(ai, {
+      model: modelName,
+      generationConfig: { temperature: 0.4, maxOutputTokens: 1200 },
+    }),
+  }));
 
   window.dayflowGemini = {
     ready: true,
@@ -97,6 +105,7 @@ try {
       if (cleanQuestion.length > 800) throw new Error('問題請控制在 800 字以內。');
       const history = questionHistory.slice(-8).map(item => `${item.role === 'user' ? '使用者' : 'Gemini'}：${item.text}`).join('\n');
       const prompt = `你是繁體中文的問答助理。每次回答前都先使用 Google 搜尋查找與問題相關的可靠資料，再用清楚、直接的繁體中文整理答案。若搜尋資料不足、來源互相矛盾或找不到答案，請坦白說明。只根據搜尋結果作答，不可捏造資料或來源，也不要自行編寫網址；網站會根據搜尋結果顯示可查證的來源。\n\n先前對話：\n${history || '（無）'}\n\n目前問題：\n${cleanQuestion}`;
+      let searchUnavailableError = null;
       for (let index = 0; index < groundedModels.length; index += 1) {
         const candidate = groundedModels[index];
         try {
@@ -114,9 +123,35 @@ try {
             await new Promise(resolve => setTimeout(resolve, 800));
             continue;
           }
-          if (retryable) throw new Error('Gemini 搜尋服務暫時繁忙，已改試另一個模型，請稍後再問。');
+          if (retryable) {
+            searchUnavailableError = error;
+            break;
+          }
           throw error;
         }
+      }
+      if (searchUnavailableError) {
+        const fallbackPrompt = `你是繁體中文問答助理。Google 搜尋目前不可用，請只用一般知識簡明回答，不可假裝已搜尋或提供虛構來源。若問題需要即時資訊，請明確提醒使用者目前沒有查證網路資料。\n\n先前對話：\n${history || '（無）'}\n\n目前問題：\n${cleanQuestion}`;
+        let fallbackError = null;
+        for (let index = 0; index < answerModels.length; index += 1) {
+          try {
+            const result = await answerModels[index].model.generateContent(fallbackPrompt);
+            const text = String(result.response.text() || '').trim();
+            if (!text) throw new Error('Gemini 回覆是空白的');
+            questionHistory.push({ role: 'user', text: cleanQuestion }, { role: 'model', text });
+            return { text, groundingMetadata: null, searchUnavailable: true };
+          } catch (error) {
+            fallbackError = error;
+            const message = `${error?.code || ''} ${error?.message || ''}`;
+            if (/\b(429|500|502|503|504)\b|high demand|unavailable|fetch-error/i.test(message) && index < answerModels.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 800));
+              continue;
+            }
+            break;
+          }
+        }
+        const detail = String(fallbackError?.message || searchUnavailableError?.message || '').slice(0, 180);
+        throw new Error(`Google 搜尋暫時無法使用，Gemini 一般回答也未能完成。請稍後再試。${detail ? `（${detail}）` : ''}`);
       }
       throw new Error('Gemini 暫時無法回答，請稍後再試。');
     },

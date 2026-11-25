@@ -68,6 +68,12 @@ function appendInlineCitations(container, text, metadata, chunks) {
 function renderGroundedAnswer(bubble, result) {
   const metadata = result?.groundingMetadata;
   const chunks = Array.isArray(metadata?.groundingChunks) ? metadata.groundingChunks : [];
+  if (result?.searchUnavailable) {
+    const note = document.createElement('p');
+    note.className = 'gemini-chat-fallback-note';
+    note.textContent = '網路搜尋暫時無法使用；以下是 Gemini 一般回答，沒有即時搜尋來源。';
+    bubble.append(note);
+  }
   const answer = document.createElement('div');
   answer.className = 'gemini-chat-text';
   appendInlineCitations(answer, String(result?.text || ''), metadata, chunks);
@@ -138,6 +144,13 @@ async function sendQuestion(event) {
   event.preventDefault();
   const question = input.value.trim();
   if (!question || sendButton.disabled) return;
+  const localAnswer = window.dayflowLocalAnswer?.(question);
+  if (localAnswer) {
+    makeBubble('user', question);
+    input.value = '';
+    makeBubble('assistant', localAnswer, 'local');
+    return;
+  }
   const engine = window.dayflowGemini;
   if (!engine?.ready || typeof engine.ask !== 'function') {
     makeBubble('assistant', engine?.error || 'Gemini 尚未完成設定。', 'error');
