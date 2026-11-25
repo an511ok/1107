@@ -60,7 +60,7 @@
 <!-- Firebase Authentication setup: see FIREBASE_SETUP.md -->
 <script src="./firebase-config.js"></script>
 <script type="module" src="./firebase-auth.js"></script>
-<script type="module" src="./firebase-ai-planner.js?v=gemini-fallback-20261125"></script>
+<script type="module" src="./firebase-ai-planner.js?v=gemini-fallback-2-20261125"></script>
 <script>
 const CATEGORY_TONES=['green','blue','lavender','orange','rose','teal'];const DEFAULT_CATEGORIES={life:{label:'生活',tone:'green',class:'tone-green'},work:{label:'工作',tone:'orange',class:'tone-orange'},study:{label:'學習',tone:'blue',class:'tone-blue'},personal:{label:'個人',tone:'lavender',class:'tone-lavender'}};let categories={...DEFAULT_CATEGORIES};const getCategory=id=>categories[id]||{label:'未分類',tone:'gray',class:'tone-gray'};
 const iso=(d)=>{const x=new Date(d);return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`};
