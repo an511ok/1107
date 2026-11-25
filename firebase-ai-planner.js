@@ -46,7 +46,7 @@ try {
     useLimitedUseAppCheckTokens: true,
   });
   model = getGenerativeModel(ai, {
-    model: 'gemini-4-hydrogen',
+    model: 'gemini-3.8-flash',
     generationConfig: {
       temperature: 0.35,
       maxOutputTokens: 700,
